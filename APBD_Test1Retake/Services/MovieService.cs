@@ -10,9 +10,11 @@ public class MovieService : IMovieService
 {
     private readonly string _connectionString;
 
-    public MovieService(IConfiguration configuration)
+    public MovieService(IConfiguration cfg)
     {
-        _connectionString = configuration.GetConnectionString("UniversityDatabase");
+        _connectionString = cfg.GetConnectionString("DefaultConnection") ?? throw new ArgumentNullException(
+            nameof(cfg),
+            "DefaultConnection connection string configuration is missing");
     }
 
     public async Task<List<MovieDetailsDTO>> GetAllMoviesAsync(DateTime? releaseDateFrom, DateTime? releaseDateTo)
@@ -22,7 +24,7 @@ public class MovieService : IMovieService
         await using (SqlConnection connection = new(_connectionString))
         {
             await connection.OpenAsync();
-            
+
             string sql = @"
             SELECT 
                 m.IdMovie, m.Name AS MovieName, m.ReleaseDate,
@@ -48,7 +50,7 @@ public class MovieService : IMovieService
                     while (await reader.ReadAsync())
                     {
                         int movieId = reader.GetInt32(reader.GetOrdinal("IdMovie"));
-                        
+
                         if (!movieDict.ContainsKey(movieId))
                         {
                             movieDict[movieId] = new MovieDetailsDTO
@@ -62,7 +64,7 @@ public class MovieService : IMovieService
                                 Actors = new List<MovieActorDTO>()
                             };
                         }
-                        
+
                         if (!reader.IsDBNull(reader.GetOrdinal("IdActor")))
                         {
                             var actor = new MovieActorDTO
