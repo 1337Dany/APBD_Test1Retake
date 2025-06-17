@@ -2,7 +2,7 @@
 
 namespace APBD_Test1Retake.Models;
 
-public class Actor_Movie
+public class ActorMovie
 {
     public int IdActorMovie { get; set; }
 
