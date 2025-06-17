@@ -8,7 +8,7 @@ namespace APBD_Test1Retake.Controllers;
 [ApiController]
 public class MovieController(IMovieService movieService) : ControllerBase
 {
-    [HttpGet("api/[controller]")]
+    [HttpGet("api/movie")]
     public async Task<ActionResult<List<MovieActorDTO>>> GetAllMovies(
         [FromQuery] DateTime? releaseDateFrom, 
         [FromQuery] DateTime? releaseDateTo
@@ -25,7 +25,7 @@ public class MovieController(IMovieService movieService) : ControllerBase
         }
     }
 
-    [HttpPost("api/[controller]")]
+    [HttpPost("api/movie")]
     public async Task<ActionResult<int>> AddActor(NewActorMovieDTO movieDto)
     {
         try
