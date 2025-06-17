@@ -3,7 +3,7 @@ using APBD_Test1Retake.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddTransient<IMovieService, MovieMovieService>();
+builder.Services.AddTransient<IMovieService, MovieService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

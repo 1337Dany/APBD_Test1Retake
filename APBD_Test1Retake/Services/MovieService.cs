@@ -6,14 +6,24 @@ using Microsoft.Data.SqlClient;
 
 namespace APBD_Test1Retake.Services;
 
-public class MovieMovieService : IMovieService
+public class MovieService : IMovieService
 {
-    const string connectionString =
-        "Data Source=db-mssql;Initial Catalog=2019SBD;Integrated Security=True;TrustServerCertificate=True";
+    private readonly string _connectionString;
 
-    public async Task<List<MovieActorDTO>> GetAllMoviesAsync(DateTime? releaseDateFrom, DateTime? releaseDateTo)
+    public MovieService(IConfiguration configuration)
     {
-        const string queryString = @"
+        _connectionString = configuration.GetConnectionString("UniversityDatabase");
+    }
+
+    public async Task<List<MovieDetailsDTO>> GetAllMoviesAsync(DateTime? releaseDateFrom, DateTime? releaseDateTo)
+    {
+        var result = new List<MovieDetailsDTO>();
+
+        await using (SqlConnection connection = new(_connectionString))
+        {
+            await connection.OpenAsync();
+            
+            string sql = @"
             SELECT 
                 m.IdMovie, m.Name AS MovieName, m.ReleaseDate,
                 ar.Name AS AgeRatingName,
@@ -26,60 +36,58 @@ public class MovieMovieService : IMovieService
               AND (@ReleaseDateTo IS NULL OR m.ReleaseDate <= @ReleaseDateTo)
             ORDER BY m.ReleaseDate DESC";
 
-        await using (SqlConnection connection = new(connectionString))
-        {
-            SqlCommand command = new(queryString, connection);
-            command.Parameters.AddWithValue("@ReleaseDateFrom", (object?)releaseDateFrom ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ReleaseDateTo", (object?)releaseDateTo ?? DBNull.Value);
-
-            try
+            using (SqlCommand command = new SqlCommand(sql, connection))
             {
-                var result = new List<MovieActorDTO>();
-                await connection.OpenAsync();
+                command.Parameters.AddWithValue("@ReleaseDateFrom", (object?)releaseDateFrom ?? DBNull.Value);
+                command.Parameters.AddWithValue("@ReleaseDateTo", (object?)releaseDateTo ?? DBNull.Value);
 
                 using (var reader = await command.ExecuteReaderAsync())
                 {
+                    var movieDict = new Dictionary<int, MovieDetailsDTO>();
+
                     while (await reader.ReadAsync())
                     {
-                        var dto = new MovieActorDTO
+                        int movieId = reader.GetInt32(reader.GetOrdinal("IdMovie"));
+                        
+                        if (!movieDict.ContainsKey(movieId))
                         {
-                            IdMovie = reader.GetInt32(reader.GetOrdinal("IdMovie")),
-                            MovieName = reader.GetString(reader.GetOrdinal("MovieName")),
-                            ReleaseDate = reader.GetDateTime(reader.GetOrdinal("ReleaseDate")),
-                            AgeRatingName = reader.IsDBNull(reader.GetOrdinal("AgeRatingName"))
-                                ? null
-                                : reader.GetString(reader.GetOrdinal("AgeRatingName")),
+                            movieDict[movieId] = new MovieDetailsDTO
+                            {
+                                IdMovie = movieId,
+                                Name = reader.GetString(reader.GetOrdinal("MovieName")),
+                                ReleaseDate = reader.GetDateTime(reader.GetOrdinal("ReleaseDate")),
+                                AgeRatingName = reader.IsDBNull(reader.GetOrdinal("AgeRatingName"))
+                                    ? null
+                                    : reader.GetString(reader.GetOrdinal("AgeRatingName")),
+                                Actors = new List<MovieActorDTO>()
+                            };
+                        }
+                        
+                        if (!reader.IsDBNull(reader.GetOrdinal("IdActor")))
+                        {
+                            var actor = new MovieActorDTO
+                            {
+                                IdActor = reader.GetInt32(reader.GetOrdinal("IdActor")),
+                                Name = reader.GetString(reader.GetOrdinal("ActorName")),
+                                Surname = reader.GetString(reader.GetOrdinal("Surname")),
+                                CharacterName = reader.GetString(reader.GetOrdinal("CharacterName"))
+                            };
 
-                            IdActor = reader.IsDBNull(reader.GetOrdinal("IdActor"))
-                                ? null
-                                : reader.GetInt32(reader.GetOrdinal("IdActor")),
-                            ActorName = reader.IsDBNull(reader.GetOrdinal("ActorName"))
-                                ? null
-                                : reader.GetString(reader.GetOrdinal("ActorName")),
-                            ActorSurname = reader.IsDBNull(reader.GetOrdinal("Surname"))
-                                ? null
-                                : reader.GetString(reader.GetOrdinal("Surname")),
-                            CharacterName = reader.IsDBNull(reader.GetOrdinal("CharacterName"))
-                                ? null
-                                : reader.GetString(reader.GetOrdinal("CharacterName")),
-                        };
-
-                        result.Add(dto);
+                            movieDict[movieId].Actors.Add(actor);
+                        }
                     }
-                }
 
-                return result;
-            }
-            catch (SqlException ex)
-            {
-                throw new ServerResponseError("Server returned an error: " + ex.Message);
+                    result.AddRange(movieDict.Values);
+                }
             }
         }
+
+        return result;
     }
 
     public async Task<int> AddNewActorAsync(NewActorMovieDTO dto)
     {
-        await using (SqlConnection connection = new(connectionString))
+        await using (SqlConnection connection = new(_connectionString))
         {
             await connection.OpenAsync();
             await using (var transaction = connection.BeginTransaction())
