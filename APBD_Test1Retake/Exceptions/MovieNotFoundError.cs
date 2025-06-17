@@ -1,6 +1,6 @@
 ﻿namespace APBD_Test1Retake.Exceptions;
 
-public class MovieNotFoundError
+public class MovieNotFoundError(string s) : Exception(s)
 {
     
 }

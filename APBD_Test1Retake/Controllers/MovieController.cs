@@ -6,35 +6,44 @@ using Microsoft.AspNetCore.Mvc;
 namespace APBD_Test1Retake.Controllers;
 
 [ApiController]
-public class Controller(IService service) : ControllerBase
+public class MovieController(IMovieService movieService) : ControllerBase
 {
-    [HttpGet("api/[controller]/{id}")]
-    public async Task<ActionResult<List<ModelDTO>>> Get(int id)
+    [HttpGet("api/[controller]")]
+    public async Task<ActionResult<List<MovieActorDTO>>> GetAllMovies(
+        [FromQuery] DateTime? releaseDateFrom, 
+        [FromQuery] DateTime? releaseDateTo
+        )
     {
         try
         {
-            var tmp = await service.GetAllAsync(id);
-            return Ok(tmp);
+            var movies = await movieService.GetAllMoviesAsync(releaseDateFrom, releaseDateTo);
+            return Ok(movies);
         }
         catch (ServerResponseError e)
         {
-            return BadRequest(e.Message); //400, NotFound 404,   
+            return BadRequest(e.Message);
         }
     }
 
     [HttpPost("api/[controller]")]
-    public async Task<ActionResult<int>> AddActor(NewActorDTO dto)
+    public async Task<ActionResult<int>> AddActor(NewActorMovieDTO movieDto)
     {
         try
         {
-            var tmp = await service.AddAsync(dto);
-            return Ok(tmp);
+            var id = await movieService.AddNewActorAsync(movieDto);
+            return Ok(id);
+        }
+        catch (MovieNotFoundError e)
+        {
+            return NotFound(e.Message); 
+        }
+        catch (ActorNotFoundError e)
+        {
+            return NotFound(e.Message);
         }
         catch (ServerResponseError e)
         {
-            return BadRequest(e.Message); //400, NotFound 404,   
+            return BadRequest(e.Message);
         }
     }
-    
-    
 }

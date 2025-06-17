@@ -1,6 +1,6 @@
 ﻿namespace APBD_Test1Retake.Exceptions;
 
-public class ServerResponseError
+public class ServerResponseError(string s) : Exception(s)
 {
     
 }

@@ -2,7 +2,7 @@
 
 namespace APBD_Test1Retake.DTOs;
 
-public class NewActorDTO
+public class NewActorMovieDTO
 {
     [Required]
     public int IdMovie { get; set; }
@@ -12,5 +12,5 @@ public class NewActorDTO
 
     [Required]
     [StringLength(50)]
-    public string Nickname { get; set; }
+    public string CharacterName { get; set; }
 }
